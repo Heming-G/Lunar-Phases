@@ -15,51 +15,96 @@ the bottom is the transformation you chose. Print before you plot.
 
 import csv
 from pathlib import Path
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 
-FILE = "hko-daily-mean-temperature-2026.csv"   # CHANGE ME: the same name as in fetch.py
-PICTURE = "plot.png"                           # what goes into out/, and into the README
+FILE = "hko-moonrise-moonset-2026.csv"
+PICTURE = "plot.png"
 
 HERE = Path(__file__).parent
 DATA = HERE / "data" / FILE
 OUT = HERE / "out"
 
 
+def time_to_hours(text):
+    """Convert HH:MM into decimal hours. Empty cells return None."""
+    if not text:
+        return None
+
+    hour, minute = text.split(":")
+    return int(hour) + int(minute) / 60
+
+
 def rows(path):
-    """The file as a list of lists, one per line. The Observatory puts three lines
-    of titles above the table and a legend below it, so keep only the lines that
-    start with a year."""
+    """Read the HKO moonrise CSV and return its data rows."""
     kept = []
+
     with path.open(encoding="utf-8-sig", newline="") as handle:
-        for line in csv.reader(handle):
-            if line and line[0].isdigit():
+        reader = csv.reader(handle)
+        next(reader)  # skip header
+
+        for line in reader:
+            if line:
                 kept.append(line)
+
     return kept
 
 
 def main():
     table = rows(DATA)
-    print(f"{DATA.name}: {len(table)} rows. The first one: {table[0]}")
 
-    days, values = [], []
-    for i, (year, month, day, value, quality) in enumerate(table):   # the loop over the numbers
-        if value == "***":                   # the Observatory's word for "missing"
-            continue
-        days.append(i + 1)
-        values.append(float(value))          # it arrived as text; make it a number
-    print(f"{len(values)} values, from {min(values)} to {max(values)}")
+    print(f"{DATA.name}: {len(table)} rows")
+    print(f"First row: {table[0]}")
 
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(days, values, color="#d6591d", linewidth=1.5)
-    ax.set_xlabel("day of 2026")
-    ax.set_ylabel("daily mean temperature, °C")
-    ax.set_title("Hong Kong Observatory, 2026 so far")
+    days = []
+    moonrise = []
+    transit = []
+    moonset = []
+
+    for date_text, rise_text, transit_text, set_text in table:
+        date = datetime.strptime(date_text, "%Y-%m-%d")
+        day_of_year = date.timetuple().tm_yday
+
+        rise = time_to_hours(rise_text)
+        transit_time = time_to_hours(transit_text)
+        set_time = time_to_hours(set_text)
+
+        if rise is not None:
+            days.append(day_of_year)
+            moonrise.append(rise)
+        else:
+            moonrise.append(None)
+
+        transit.append(transit_time)
+        moonset.append(set_time)
+
+    all_days = [
+        datetime.strptime(row[0], "%Y-%m-%d").timetuple().tm_yday
+        for row in table
+    ]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    ax.scatter(all_days, moonrise, s=10, label="Moonrise")
+    ax.scatter(all_days, transit, s=10, label="Moon transit")
+    ax.scatter(all_days, moonset, s=10, label="Moonset")
+
+    ax.set_xlabel("Day of 2026")
+    ax.set_ylabel("Time of day (hours)")
+    ax.set_title("Moonrise, Transit and Moonset in Hong Kong — 2026")
+
+    ax.set_ylim(0, 24)
+    ax.set_yticks(range(0, 25, 3))
+    ax.legend()
+
     fig.tight_layout()
 
     OUT.mkdir(exist_ok=True)
     fig.savefig(OUT / PICTURE, dpi=150)
+
     print(f"saved out/{PICTURE}")
+
     plt.show()
 
 
