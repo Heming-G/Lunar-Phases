@@ -8,14 +8,14 @@ Read the file in data/, make one picture, save it to out/.
 
     uv run plot.py
 
-Three parts, and you will replace all three: rows() reads the file the way *your*
-file needs reading, the loop in main() picks the numbers out of it, and the plot at
-the bottom is the transformation you chose. Print before you plot.
+The saved HKO CSV supplies dates and event times. Missing cells remain gaps.
+Dots avoid connecting events across midnight.
 """
 
 import csv
 from pathlib import Path
 from datetime import datetime
+import matplotlib.dates as mdates
 
 import matplotlib.pyplot as plt
 
@@ -57,55 +57,60 @@ def main():
     print(f"{DATA.name}: {len(table)} rows")
     print(f"First row: {table[0]}")
 
-    days = []
+    dates = []
     moonrise = []
     transit = []
     moonset = []
 
     for date_text, rise_text, transit_text, set_text in table:
-        date = datetime.strptime(date_text, "%Y-%m-%d")
-        day_of_year = date.timetuple().tm_yday
+        dates.append(datetime.strptime(date_text, "%Y-%m-%d"))
+        # Keep one entry per date. Missing events remain gaps, not zeroes.
+        moonrise.append(time_to_hours(rise_text))
+        transit.append(time_to_hours(transit_text))
+        moonset.append(time_to_hours(set_text))
 
-        rise = time_to_hours(rise_text)
-        transit_time = time_to_hours(transit_text)
-        set_time = time_to_hours(set_text)
+    background = "#101925"
+    text_color = "#e8edf3"
+    muted = "#a5b4c5"
+    fig, ax = plt.subplots(figsize=(14, 8), facecolor=background)
+    ax.set_facecolor(background)
 
-        if rise is not None:
-            days.append(day_of_year)
-            moonrise.append(rise)
-        else:
-            moonrise.append(None)
+    ax.scatter(dates, moonrise, s=13, color="#edc77e", label="Moonrise", linewidths=0)
+    ax.scatter(dates, transit, s=13, color="#b6a4df", label="Moon transit", linewidths=0)
+    ax.scatter(dates, moonset, s=13, color="#83cbd2", label="Moonset", linewidths=0)
 
-        transit.append(transit_time)
-        moonset.append(set_time)
-
-    all_days = [
-        datetime.strptime(row[0], "%Y-%m-%d").timetuple().tm_yday
-        for row in table
-    ]
-
-    fig, ax = plt.subplots(figsize=(12, 6))
-
-    ax.scatter(all_days, moonrise, s=10, label="Moonrise")
-    ax.scatter(all_days, transit, s=10, label="Moon transit")
-    ax.scatter(all_days, moonset, s=10, label="Moonset")
-
-    ax.set_xlabel("Day of 2026")
-    ax.set_ylabel("Time of day (hours)")
-    ax.set_title("Moonrise, Transit and Moonset in Hong Kong — 2026")
-
+    fig.text(0.09, 0.92, "LUNAR RHYTHM", color=text_color, fontsize=27, weight="bold")
+    fig.text(0.09, 0.875, "Hong Kong / 2026   —   Daily moonrise, transit and moonset",
+             color=muted, fontsize=12)
+    ax.set_xlim(datetime(2026, 1, 1), datetime(2026, 12, 31))
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
     ax.set_ylim(0, 24)
     ax.set_yticks(range(0, 25, 3))
-    ax.legend()
-
-    fig.tight_layout()
+    ax.set_yticklabels([f"{hour:02d}:00" for hour in range(0, 25, 3)])
+    ax.set_ylabel("Time of day · Hong Kong time (UTC+8)", color=muted, labelpad=15)
+    ax.tick_params(colors=muted, length=0, pad=10)
+    ax.set_axisbelow(True)
+    ax.grid(axis="y", color="#344150", linewidth=0.6, alpha=0.6)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    legend = ax.legend(loc="lower left", bbox_to_anchor=(0, 1.025), ncol=3,
+                       frameon=False, borderaxespad=0, fontsize=11)
+    for label in legend.get_texts():
+        label.set_color(text_color)
+    fig.text(0.09, 0.045,
+             "Each dot is one daily event. Midnight wraps from 24:00 to 00:00; blank records remain gaps.",
+             color=muted, fontsize=10)
+    fig.text(0.09, 0.018, "Source: Hong Kong Observatory · MRS Open Data · 365 daily records",
+             color=muted, fontsize=9)
+    fig.subplots_adjust(left=0.09, right=0.975, bottom=0.13, top=0.76)
 
     OUT.mkdir(exist_ok=True)
-    fig.savefig(OUT / PICTURE, dpi=150)
+    fig.savefig(OUT / PICTURE, dpi=180, facecolor=background)
+    plt.close(fig)
 
     print(f"saved out/{PICTURE}")
 
-    plt.show()
 
 
 if __name__ == "__main__":

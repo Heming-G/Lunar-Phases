@@ -1,34 +1,22 @@
-# The phenomenon
+# Lunar Rhythm — Hong Kong, 2026
 
-<!-- This is the SD5913 assignment 2 template. Everything in this file is yours to
-replace, and the check counts words: comments like this one are not words, so
-delete each one as you write. Start with the heading: name the phenomenon.
-
-Then, in this order, at least 150 words in total.
-
-New to folders, paths, or the files here whose names start with a dot? Read
-https://github.com/sd5913/pfad/blob/2026/reference/files.md first. Ten minutes. -->
-
-![what the picture is](out/plot.png)
+![Daily moonrise, transit and moonset times in Hong Kong in 2026](out/plot.png)
 
 ## The phenomenon
 
-<!-- What goes up and down, and why you looked at it. -->
+The times when the Moon rises, crosses the local meridian and sets change throughout the year. I chose these daily changes because their repetition creates a visual rhythm. This project uses a readable scatter plot to explore that rhythm across 2026. It visualises event times, rather than the illuminated shape or phase of the Moon.
 
 ## The source
 
-<!-- A link to the page or endpoint the file came from, and one line on what is in
-the file: how many rows, what a row means, what the units are. -->
+The data comes from the [Hong Kong Observatory MRS CSV endpoint](https://data.weather.gov.hk/weatherAPI/opendata/opendata.php?dataType=MRS&year=2026&rformat=csv). The unchanged reply is saved in `data/hko-moonrise-moonset-2026.csv`. It contains 365 daily rows, with the columns `YYYY-MM-DD`, `RISE`, `TRAN.` and `SET`. Times are given as hours and minutes in Hong Kong time (UTC+8). Empty cells represent days without that particular event within the calendar day; they remain missing values in the plot.
 
 ## What the picture shows
 
-<!-- Two or three sentences. Including what it hides: every transformation throws
-something away, and naming what yours threw away is the easiest way to sound like
-you know what you did. -->
+Each dot places one event at its date and clock time, with gold for moonrise, lavender for transit and cyan for moonset. Repeated diagonal bands reveal the changing daily schedule, while the midnight boundary causes patterns to wrap from the top to the bottom. The picture hides the Moon’s brightness, altitude between events and phase; it does not show continuous paths or calculate how long the Moon is above the horizon.
 
 ## Run it
 
-```
+```bash
 uv run fetch.py
 uv run plot.py
 ```
